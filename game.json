@@ -1,0 +1,41 @@
+{
+	"width": 480,
+	"height": 480,
+	"fps": 30,
+	"main": "./script/main.js",
+	"assets": {
+		"explosion": {
+			"type": "image",
+			"width": 800,
+			"height": 200,
+			"path": "image/explosion.png"
+		},
+		"player": {
+			"type": "image",
+			"width": 128,
+			"height": 32,
+			"path": "image/ninja_shotgun.png"
+		},
+		"shot": {
+			"type": "image",
+			"width": 64,
+			"height": 32,
+			"path": "image/shot_fire.png"
+		},
+		"enemy": {
+			"type": "image",
+			"width": 384,
+			"height": 128,
+			"path": "image/robot_dog.png"
+		},
+		"main": {
+			"type": "script",
+			"path": "script/main.js",
+			"global": true
+		}
+	},
+	"moduleMainScripts": {},
+	"environment": {
+		"sandbox-runtime": "3"
+	}
+}
