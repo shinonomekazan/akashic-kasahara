@@ -7,7 +7,7 @@ function main(param) {
 	var scene = new g.Scene({
 		game: g.game,
 		// このシーンで利用するアセットのIDを列挙し、シーンに通知します
-		assetIds: ["explosion", "shot", "player", "enemy"]
+		assetIds: ["explosion", "shot", "player", "enemy", "background"]
 	});
 	scene.onLoad.add(function () {
 
@@ -33,6 +33,16 @@ function main(param) {
 			lastY = ev.point.y;
 		});
 
+		let background = new g.Sprite({
+			scene: scene,
+			src: scene.asset.getImageById("background"),
+			x: 0,
+			y: 0,
+			scaleX: 2,
+			scaleY: 2,
+		});
+		scene.append(background);
+
 		ninja = new g.FrameSprite({
 			scene: scene,
 			src: scene.asset.getImageById("player"),
@@ -40,8 +50,8 @@ function main(param) {
 			height: 32,
 			srcWidth: 64,
 			srcHeight: 32,
-			x: 100,
-			y: 100,
+			x: 40,
+			y: 240,
 			frames: [0, 0, 0, 0, 1, 1, 1, 1],
 			loop: true
 		});
@@ -55,8 +65,8 @@ function main(param) {
 			height: 128,
 			srcWidth: 192,
 			srcHeight: 128,
-			x: 240,
-			y: 240,
+			x: 280,
+			y: 200,
 			frames: [0, 0, 0, 0, 1, 1, 1, 1],
 			loop: true
 		});
@@ -68,30 +78,56 @@ function main(param) {
 
 			mainLoop(scene, lastEv, isPointPress);
 
+			// TODO: 以下もメインループ
 			for (let i = 0; i < shurikens.length; i++) {
 				shurikens[i].x += 4;
+				if (!enemySprite.visible()) {
+					continue;
+				}
 				if (shurikens[i].visible() && g.Collision.intersect(shurikens[i].x, shurikens[i].y, 32, 32, enemySprite.x, enemySprite.y, 96, 96)) {
 					shurikens[i].hide();
 
 					var explosion = new g.FrameSprite({
 						scene: scene,
 						src: scene.asset.getImageById("explosion"),
-						width: 96,
-						height: 96,
-						srcWidth: 100,
-						srcHeight: 100,
-						x: shurikens[i].x,
+						width: 16,
+						height: 16,
+						srcWidth: 16,
+						srcHeight: 16,
+						x: shurikens[i].x, // centerXとか欲しい...
 						y: shurikens[i].y,
-						frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-						loop: true
+						frames: [0, 1, 2],
+						loop: true,
+						scaleX: 2,
+						scaleY: 2,
+						interval: 100
 					});
 					scene.append(explosion);
 					explosion.start();
 					scene.setTimeout(function () {
 						explosion.destroy();
-					}, 500);
+					}, 300);
+
+					robotHP--;
+					if (!isRobotDead && robotHP <= 0) {
+						isRobotDead = true;
+						explosionCount = 100;
+					}
 				}
 			}
+
+			if (explosionCount > 0) {
+				explosionCount--;
+				if (explosionCount === 0) {
+					enemySprite.hide();
+				}
+				explode(
+					scene, 
+					enemySprite.x + xorshift.generate() * enemySprite.width, 
+					enemySprite.y + xorshift.generate() * enemySprite.height
+				);
+			}
+
 		});
 	});
 	g.game.pushScene(scene);
@@ -105,6 +141,10 @@ let lastY = 240;
 let ninja = null;
 let ninjaPos = { x: 32, y: 240 };
 let enemySprite = null;
+let robotHP = 10;
+let isRobotDead = false;
+let explosionCount = 0;
+const xorshift = new g.XorshiftRandomGenerator(13579);
 
 function mainLoop(scene, ev, isPointPress) {
 	if (isPointPress) {
@@ -155,10 +195,34 @@ function createShuriken(scene) {
 		//y: ev.point.y - size / 2,
 		// アニメーションに利用するフレームのインデックス配列
 		// インデックスは元画像の左上から右にsrcWidthとsrcHeightの矩形を並べて数え上げ、右端に達したら一段下の左端から右下に達するまで繰り返す
-		frames: [0, 0, 0, 0, 1, 1, 1, 1],
+		frames: [0, 1],
 		// アニメーションをループする（省略した場合ループする）
-		loop: true
+		loop: true,
+		interval: 100
 	});
+}
+
+function explode(scene, x, y) {
+	var explosion = new g.FrameSprite({
+		scene: scene,
+		src: scene.asset.getImageById("explosion"),
+		width: 16,
+		height: 16,
+		srcWidth: 16,
+		srcHeight: 16,
+		x: x,
+		y: y,
+		frames: [0, 1, 2],
+		loop: true,
+		scaleX: 2,
+		scaleY: 2,
+		interval: 100
+	});
+	scene.append(explosion);
+	explosion.start();
+	scene.setTimeout(function () {
+		explosion.destroy();
+	}, 300);
 }
 
 module.exports = main;

@@ -6,8 +6,8 @@
 	"assets": {
 		"explosion": {
 			"type": "image",
-			"width": 800,
-			"height": 200,
+			"width": 48,
+			"height": 16,
 			"path": "image/explosion.png"
 		},
 		"player": {
@@ -27,6 +27,12 @@
 			"width": 384,
 			"height": 128,
 			"path": "image/robot_dog.png"
+		},
+		"background": {
+			"type": "image",
+			"width": 240,
+			"height": 240,
+			"path": "image/background.png"
 		},
 		"main": {
 			"type": "script",
