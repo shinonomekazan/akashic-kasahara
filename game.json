@@ -28,6 +28,12 @@
 			"height": 128,
 			"path": "image/robot_dog.png"
 		},
+		"bullet": {
+			"type": "image",
+			"width": 32,
+			"height": 16,
+			"path": "image/bullet.png"
+		},
 		"background": {
 			"type": "image",
 			"width": 240,
