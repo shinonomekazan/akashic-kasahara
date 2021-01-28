@@ -38,6 +38,42 @@
 			"type": "script",
 			"path": "script/main.js",
 			"global": true
+		},
+		"game_maoudamashii_2_boss08": {
+			"type": "audio",
+			"path": "audio/bgm/game_maoudamashii_2_boss08",
+			"systemId": "sound",
+			"duration": 67396
+		},
+		"game_maoudamashii_9_jingle05": {
+			"type": "audio",
+			"path": "audio/bgm/game_maoudamashii_9_jingle05",
+			"systemId": "sound",
+			"duration": 33829
+		},
+		"damageSE": {
+			"type": "audio",
+			"path": "audio/se/damageSE",
+			"systemId": "sound",
+			"duration": 209
+		},
+		"explosionSE": {
+			"type": "audio",
+			"path": "audio/se/explosionSE",
+			"systemId": "sound",
+			"duration": 209
+		},
+		"se_maoudamashii_retro30": {
+			"type": "audio",
+			"path": "audio/se/se_maoudamashii_retro30",
+			"systemId": "sound",
+			"duration": 3031
+		},
+		"shotSE": {
+			"type": "audio",
+			"path": "audio/se/shotSE",
+			"systemId": "sound",
+			"duration": 157
 		}
 	},
 	"moduleMainScripts": {},
