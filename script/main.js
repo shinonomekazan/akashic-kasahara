@@ -8,7 +8,7 @@ function main(param) {
 	const scene = new g.Scene({
 		game: g.game,
 		// このシーンで利用するアセットのIDを列挙し、シーンに通知します
-		assetIds: ["explosion", "shot", "player", "enemy", "background", "shotSE", "game_maoudamashii_2_boss08", "se_maoudamashii_retro30", "game_maoudamashii_9_jingle05", "explosionSE"]
+		assetIds: ["explosion", "shot", "player", "enemy", "bullet", "background", "shotSE", "game_maoudamashii_2_boss08", "se_maoudamashii_retro30", "game_maoudamashii_9_jingle05", "explosionSE"]
 	});
 
 	scene.onLoad.add(function () {
@@ -139,11 +139,15 @@ let isRobotDead = false;
 let enemyMoveDirection = 0;
 let explosionCount = 0;
 const xorshift = new g.XorshiftRandomGenerator(13579);
-let isInit = false;
+let enemyAttackTime = Math.floor(xorshift.generate() * 50 + 100);
+let enemyBulletR = 0;
+let enemyBullet = null;
+let ninjaExplosionCount = 0;
+let isNinjaDead = false;
 
 function mainLoop(scene, ev, isPointPress) {
 	// Player
-	if (isPointPress) {
+	if (isPointPress && !isNinjaDead) {
 		if (shotFrameCount + shotInterval < g.game.age) {
 			shotFrameCount = g.game.age;
 			const shuriken = createShuriken(scene);
@@ -235,6 +239,63 @@ function mainLoop(scene, ev, isPointPress) {
 				scene.asset.getAudioById("se_maoudamashii_retro30").play();
 			}
 		}
+	}
+
+	// enemy attack
+	if (enemyAttackTime > 0 && !isNinjaDead) {
+		enemyAttackTime--;
+		if (enemyAttackTime === 0) {
+			enemyAttackTime = Math.floor(xorshift.generate() * 50 + 100);
+			enemyBullet = new g.FrameSprite({
+				scene: scene,
+				src: scene.asset.getImageById("bullet"),
+				width: 16,
+				height: 16,
+				srcWidth: 16,
+				srcHeight: 16,
+				x: enemySprite.x + 10,
+				y: enemySprite.y + 16,
+				frames: [0,0,0,0,0,1,1,1,1,1], // いったんこれで
+				loop: true,
+				scaleX: 2,
+				scaleY: 2,
+				//interval: 200
+			});
+			scene.append(enemyBullet);
+			enemyBullet.start();
+			/* いったんこれで
+			scene.setTimeout(function () {
+				enemyBullet.destroy();
+			}, 5000);
+			*/
+			enemyBulletR = Math.atan2(ninja.y - enemyBullet.y, ninja.x - enemyBullet.x);
+		}
+	}
+	if (enemyBullet != null) {
+		enemyBullet.x += Math.cos(enemyBulletR) * 3;
+		enemyBullet.y += Math.sin(enemyBulletR) * 3;
+
+		// ninja damage
+		if (!isNinjaDead && g.Collision.intersect(ninja.x + 4, ninja.y + 4, 24, 24, enemyBullet.x + 4, enemyBullet.y + 4, 24, 24)) {
+			isNinjaDead = true;
+			ninjaExplosionCount = 50;
+			enemyBullet.destroy();
+			scene.asset.getAudioById("se_maoudamashii_retro30").play();
+		}
+	}
+
+	// ninja explosion
+	if (ninjaExplosionCount > 0) {
+		ninjaExplosionCount--;
+		if (ninjaExplosionCount === 0) {
+			ninja.hide();
+			scene.asset.getAudioById("game_maoudamashii_2_boss08").stop();
+		}
+		explode(
+			scene,
+			ninja.x + xorshift.generate() * ninja.width - 16,
+			ninja.y + xorshift.generate() * ninja.height - 16
+		);
 	}
 
 	// enemy explosion
