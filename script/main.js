@@ -17,7 +17,10 @@ function main(param) {
 		size: 64
 	});
 
+
 	scene.onLoad.add(function () {
+		g.game.audio.music.volume = 0.2;
+		g.game.audio.sound.volume = 0.4;
 		let lastEv = null;
 		let isPointPress = false;
 		scene.onPointUpCapture.add(function (ev) {
@@ -225,7 +228,7 @@ function mainLoop(scene, ev, isPointPress) {
 		}
 	}
 
-	// player attack 
+	// player attack
 	for (let i = 0; i < shurikens.length; i++) {
 		shurikens[i].x += 4;
 		if (!enemySprite.visible()) {

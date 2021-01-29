@@ -48,13 +48,13 @@
 		"game_maoudamashii_2_boss08": {
 			"type": "audio",
 			"path": "audio/bgm/game_maoudamashii_2_boss08",
-			"systemId": "sound",
+			"systemId": "music",
 			"duration": 67396
 		},
 		"game_maoudamashii_9_jingle05": {
 			"type": "audio",
 			"path": "audio/bgm/game_maoudamashii_9_jingle05",
-			"systemId": "sound",
+			"systemId": "music",
 			"duration": 33829
 		},
 		"damageSE": {
