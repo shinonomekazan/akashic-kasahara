@@ -1,14 +1,20 @@
-// TODO: とりあえず動かしてみた小汚いコードなのでリファクタする
+// TODO: とりあえず動かしてみた小汚いコードなのでリファクタする。長いので関数作って分けないと！
 // NOTE
 //   $ echo ' export PATH=~/.npm-global/bin:$PATH' >> ~/.bash_profile
 //   $ source ~/.bash_profile
 //
-// TODO: SE,BGMは魔法魂、SEはくらげ工房か自作か不明なものあり（要調査）
+// NOTE: SE,BGMのファイル名にmaoudamashiiが含まれているのはは魔法魂のもの、他のSEは自作(使用ソフトはsfxr)
 function main(param) {
 	const scene = new g.Scene({
 		game: g.game,
 		// このシーンで利用するアセットのIDを列挙し、シーンに通知します
 		assetIds: ["explosion", "shot", "player", "enemy", "bullet", "background", "shotSE", "game_maoudamashii_2_boss08", "se_maoudamashii_retro30", "game_maoudamashii_9_jingle05", "explosionSE"]
+	});
+
+	const font = new g.DynamicFont({
+		game: g.game,
+		fontFamily: "sans-serif",
+		size: 64
 	});
 
 	scene.onLoad.add(function () {
@@ -76,6 +82,33 @@ function main(param) {
 			mainLoop(scene, lastEv, isPointPress);
 		});
 
+		// result
+		winLabel = new g.Label({
+			scene: scene,
+			font: font,
+			text: "YOU WIN",
+			fontSize: 64,
+			textColor: "white",
+			x: 10,
+			y: 150
+		});
+		loseLabel = new g.Label({
+			scene: scene,
+			font: font,
+			text: "YOU LOSE",
+			fontSize: 64,
+			textColor: "white",
+			x: 10,
+			y: 150
+		});
+
+		winLabel.x = (480 - winLabel.width) / 2;
+		loseLabel.x = (480 - loseLabel.width) / 2;
+		scene.append(winLabel);
+		scene.append(loseLabel);
+		winLabel.hide();
+		loseLabel.hide();
+
 		scene.asset.getAudioById("game_maoudamashii_2_boss08").play();
 	});
 
@@ -84,11 +117,6 @@ function main(param) {
 		game: g.game
 	});
 	titleScene.onLoad.add(function () {
-		const font = new g.DynamicFont({
-			game: g.game,
-			fontFamily: "sans-serif",
-			size: 64
-		});
 		const titleLabel = new g.Label({
 			scene: titleScene,
 			font: font,
@@ -135,15 +163,16 @@ let ninja = null;
 let ninjaPos = { x: 32, y: 240 };
 let enemySprite = null;
 let robotHP = 50;
-let isRobotDead = false;
+let isEnemyDead = false;
 let enemyMoveDirection = 0;
 let explosionCount = 0;
 const xorshift = new g.XorshiftRandomGenerator(13579);
 let enemyAttackTime = Math.floor(xorshift.generate() * 50 + 100);
 let enemyBulletR = 0;
 let enemyBullet = null;
-let ninjaExplosionCount = 0;
 let isNinjaDead = false;
+let winLabel = null;
+let loseLabel = null;
 
 function mainLoop(scene, ev, isPointPress) {
 	// Player
@@ -182,7 +211,7 @@ function mainLoop(scene, ev, isPointPress) {
 	}
 
 	// enemy move
-	if (!isRobotDead) {
+	if (!isEnemyDead) {
 		if (enemyMoveDirection === 0) {
 			enemySprite.y += 0.5;
 			if (enemySprite.y > 320) {
@@ -233,8 +262,8 @@ function mainLoop(scene, ev, isPointPress) {
 			}, 300);
 
 			robotHP--;
-			if (!isRobotDead && robotHP <= 0) {
-				isRobotDead = true;
+			if (!isEnemyDead && robotHP <= 0) {
+				isEnemyDead = true;
 				explosionCount = 100;
 				scene.asset.getAudioById("se_maoudamashii_retro30").play();
 			}
@@ -242,7 +271,7 @@ function mainLoop(scene, ev, isPointPress) {
 	}
 
 	// enemy attack
-	if (enemyAttackTime > 0 && !isNinjaDead) {
+	if (enemyAttackTime > 0 && !isNinjaDead && !isEnemyDead) {
 		enemyAttackTime--;
 		if (enemyAttackTime === 0) {
 			enemyAttackTime = Math.floor(xorshift.generate() * 50 + 100);
@@ -255,7 +284,7 @@ function mainLoop(scene, ev, isPointPress) {
 				srcHeight: 16,
 				x: enemySprite.x + 10,
 				y: enemySprite.y + 16,
-				frames: [0,0,0,0,0,1,1,1,1,1], // いったんこれで
+				frames: [0, 0, 0, 0, 0, 1, 1, 1, 1, 1], // いったんこれで
 				loop: true,
 				scaleX: 2,
 				scaleY: 2,
@@ -278,24 +307,12 @@ function mainLoop(scene, ev, isPointPress) {
 		// ninja damage
 		if (!isNinjaDead && g.Collision.intersect(ninja.x + 4, ninja.y + 4, 24, 24, enemyBullet.x + 4, enemyBullet.y + 4, 24, 24)) {
 			isNinjaDead = true;
-			ninjaExplosionCount = 50;
 			enemyBullet.destroy();
-			scene.asset.getAudioById("se_maoudamashii_retro30").play();
-		}
-	}
-
-	// ninja explosion
-	if (ninjaExplosionCount > 0) {
-		ninjaExplosionCount--;
-		if (ninjaExplosionCount === 0) {
 			ninja.hide();
+			explode(scene, ninja.x, ninja.y);
 			scene.asset.getAudioById("game_maoudamashii_2_boss08").stop();
+			scene.asset.getAudioById("explosionSE").play();
 		}
-		explode(
-			scene,
-			ninja.x + xorshift.generate() * ninja.width - 16,
-			ninja.y + xorshift.generate() * ninja.height - 16
-		);
 	}
 
 	// enemy explosion
@@ -311,6 +328,15 @@ function mainLoop(scene, ev, isPointPress) {
 			enemySprite.x + xorshift.generate() * enemySprite.width,
 			enemySprite.y + xorshift.generate() * enemySprite.height
 		);
+	}
+
+	// result
+	if (isEnemyDead) {
+		winLabel.show();
+		loseLabel.hide();
+	} else if (isNinjaDead) {
+		winLabel.hide();
+		loseLabel.show();
 	}
 }
 
