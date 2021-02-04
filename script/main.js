@@ -8,7 +8,23 @@ function main(param) {
 	const scene = new g.Scene({
 		game: g.game,
 		// このシーンで利用するアセットのIDを列挙し、シーンに通知します
-		assetIds: ["explosion", "shot", "player", "enemy", "bullet", "background", "shotSE", "game_maoudamashii_2_boss08", "se_maoudamashii_retro30", "game_maoudamashii_9_jingle05", "explosionSE"]
+		assetIds: [
+			"explosion",
+			"shot",
+			"player",
+			"enemy",
+			"bullet",
+			"background",
+			"shotSE",
+			"game_maoudamashii_2_boss08",
+			"se_maoudamashii_retro30",
+			"game_maoudamashii_9_jingle05",
+			"explosionSE",
+			"youWin",
+			"youLose",
+			"youWinJp",
+			"youLoseJp"
+		]
 	});
 
 	const font = new g.DynamicFont({
@@ -40,7 +56,7 @@ function main(param) {
 			lastY = ev.point.y;
 		});
 
-		let background = new g.Sprite({
+		const background = new g.Sprite({
 			scene: scene,
 			src: scene.asset.getImageById("background"),
 			x: 0,
@@ -86,6 +102,7 @@ function main(param) {
 		});
 
 		// result
+		/*
 		winLabel = new g.Label({
 			scene: scene,
 			font: font,
@@ -102,6 +119,19 @@ function main(param) {
 			fontSize: 64,
 			textColor: "white",
 			x: 10,
+			y: 150
+		});
+		*/
+
+		// TODO: 後でランダム切り替えする多分
+		winLabel = new g.Sprite({
+			scene: scene,
+			src: scene.asset.getImageById("youWinJp"),
+			y: 150
+		});
+		loseLabel = new g.Sprite({
+			scene: scene,
+			src: scene.asset.getImageById("youLoseJp"),
 			y: 150
 		});
 
