@@ -40,6 +40,30 @@
 			"height": 240,
 			"path": "image/background.png"
 		},
+		"youWin": {
+			"type": "image",
+			"width": 320,
+			"height": 80,
+			"path": "image/20210202_YOUWIN1.png"
+		},
+		"youLose": {
+			"type": "image",
+			"width": 320,
+			"height": 80,
+			"path": "image/20210202_YOULOSE1.png"
+		},
+		"youWinJp": {
+			"type": "image",
+			"width": 320,
+			"height": 80,
+			"path": "image/20210202_YOUWIN1_JP.png"
+		},
+		"youLoseJp": {
+			"type": "image",
+			"width": 320,
+			"height": 80,
+			"path": "image/20210202_YOULOSE1_JP.png"
+		},
 		"main": {
 			"type": "script",
 			"path": "script/main.js",
