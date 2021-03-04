@@ -4,6 +4,9 @@
 //   $ source ~/.bash_profile
 //
 // NOTE: SE,BGMのファイル名にmaoudamashiiが含まれているのはは魔法魂のもの、他のSEは自作(使用ソフトはsfxr)
+let selfPlayerId = null;
+const ninjaPlayers = new Map();
+
 function main(param) {
 	const scene = new g.Scene({
 		game: g.game,
@@ -27,46 +30,22 @@ function main(param) {
 		]
 	});
 
+	var groundLayer = new g.E({ scene: scene });
+	var characterLayer = new g.E({ scene: scene });
+	scene.append(groundLayer);
+	scene.append(characterLayer);
+
 	const font = new g.DynamicFont({
 		game: g.game,
 		fontFamily: "sans-serif",
 		size: 64
 	});
 
-
-	scene.onLoad.add(function () {
-		g.game.audio.music.volume = 0.2;
-		g.game.audio.sound.volume = 0.4;
-		let lastEv = null;
-		let isPointPress = false;
-		scene.onPointUpCapture.add(function (ev) {
-			isPointPress = false;
-		});
-
-		scene.onPointMoveCapture.add(function (ev) {
-			lastEv = ev;
-			lastX += ev.prevDelta.x;
-			lastY += ev.prevDelta.y;
-		});
-		scene.onPointDownCapture.add(function (ev) {
-			lastEv = ev;
-			isPointPress = true;
-
-			lastX = ev.point.x;
-			lastY = ev.point.y;
-		});
-
-		const background = new g.Sprite({
-			scene: scene,
-			src: scene.asset.getImageById("background"),
-			x: 0,
-			y: 0,
-			scaleX: 2,
-			scaleY: 2,
-		});
-		scene.append(background);
-
-		ninja = new g.FrameSprite({
+	function createNinja(playerId) {
+		if (ninjaPlayers.has(playerId)) {
+			return null;
+		}
+		const ninjaSprite = new g.FrameSprite({
 			scene: scene,
 			src: scene.asset.getImageById("player"),
 			width: 64,
@@ -78,8 +57,78 @@ function main(param) {
 			frames: [0, 0, 0, 0, 1, 1, 1, 1],
 			loop: true
 		});
-		scene.append(ninja);
-		ninja.start();
+		const ninjaPlayer = {
+			lastEv: null,
+			isPointPress: false,
+			lastX: 0,
+			lastY: 0,
+			ninjaPos: {
+				x: 40,
+				y: 240
+			},
+			ninja: ninjaSprite
+		};
+		ninjaPlayers.set(playerId, ninjaPlayer);
+
+		ninjaSprite.start();
+		characterLayer.append(ninjaPlayer.ninja);
+
+		console.log("id:" + playerId);
+
+		return ninjaPlayer;
+	}
+
+	scene.onLoad.add(function (ev) {
+		g.game.audio.music.volume = 0.2;
+		g.game.audio.sound.volume = 0.4;
+
+		selfPlayerId = ev.game.selfId;
+		createNinja(selfPlayerId);
+
+		const background = new g.Sprite({
+			scene: scene,
+			src: scene.asset.getImageById("background"),
+			x: 0,
+			y: 0,
+			scaleX: 2,
+			scaleY: 2,
+		});
+		groundLayer.append(background);
+
+		scene.onPointUpCapture.add(function (ev) {
+			createNinja(ev.player.id);
+			const ninjaPlayer = ninjaPlayers.get(ev.player.id);
+			if (ninjaPlayer == null) {
+				return;
+			}
+
+			ninjaPlayer.isPointPress = false;
+		});
+
+		scene.onPointMoveCapture.add(function (ev) {
+			createNinja(ev.player.id);
+			const ninjaPlayer = ninjaPlayers.get(ev.player.id);
+			if (ninjaPlayer == null) {
+				return;
+			}
+
+			ninjaPlayer.lastEv = ev;
+			ninjaPlayer.lastX += ev.prevDelta.x;
+			ninjaPlayer.lastY += ev.prevDelta.y;
+		});
+		scene.onPointDownCapture.add(function (ev) {
+			createNinja(ev.player.id);
+			const ninjaPlayer = ninjaPlayers.get(ev.player.id);
+			if (ninjaPlayer == null) {
+				return;
+			}
+
+			ninjaPlayer.lastEv = ev;
+			ninjaPlayer.isPointPress = true;
+
+			ninjaPlayer.lastX = ev.point.x;
+			ninjaPlayer.lastY = ev.point.y;
+		});
 
 		enemySprite = new g.FrameSprite({
 			scene: scene,
@@ -93,12 +142,12 @@ function main(param) {
 			frames: [0, 0, 0, 0, 1, 1, 1, 1],
 			loop: true
 		});
-		scene.append(enemySprite);
+		characterLayer.append(enemySprite);
 		enemySprite.start();
 
 		// scene の onUpdate を設定し、毎フレーム実行する処理を記述
-		scene.onUpdate.add(function () {
-			mainLoop(scene, lastEv, isPointPress);
+		scene.onUpdate.add(function (ev) {
+			mainLoop(scene);
 		});
 
 		// result
@@ -187,13 +236,13 @@ function main(param) {
 	g.game.pushScene(titleScene);
 }
 
-let shurikens = [];
+const shurikens = [];
 const shotInterval = 10;
 let shotFrameCount = 10;
-let lastX = 32;
-let lastY = 240;
-let ninja = null;
-let ninjaPos = { x: 32, y: 240 };
+//let lastX = 32;
+//let lastY = 240;
+//let ninja = null;
+//let ninjaPos = { x: 32, y: 240 };
 let enemySprite = null;
 let robotHP = 50;
 let isEnemyDead = false;
@@ -201,46 +250,59 @@ let enemyMoveDirection = 0;
 let explosionCount = 0;
 const xorshift = new g.XorshiftRandomGenerator(13579);
 let enemyAttackTime = Math.floor(xorshift.generate() * 50 + 100);
-let enemyBulletR = 0;
-let enemyBullet = null;
+//let enemyBulletR = 0;
+//let enemyBullet = null;
+const enemyBullets = [];
 let isNinjaDead = false;
 let winLabel = null;
 let loseLabel = null;
 
-function mainLoop(scene, ev, isPointPress) {
-	// Player
-	if (isPointPress && !isNinjaDead) {
-		if (shotFrameCount + shotInterval < g.game.age) {
-			shotFrameCount = g.game.age;
-			const shuriken = createShuriken(scene);
+function mainLoop(scene) {
+	for (const ninjaPlayer of ninjaPlayers.values()) {
+		// Player
+		const isPointPress = ninjaPlayer.isPointPress;
+		if (isPointPress && !isNinjaDead) {
+			if (shotFrameCount + shotInterval < g.game.age) {
+				shotFrameCount = g.game.age;
 
-			shuriken.x = ninjaPos.x + 32;
-			shuriken.y = ninjaPos.y;
-			scene.append(shuriken);
-			shuriken.start();
-			scene.asset.getAudioById("shotSE").play();
+				const shuriken = createShuriken(scene);
+				shuriken.x = ninjaPlayer.ninjaPos.x + 32;
+				shuriken.y = ninjaPlayer.ninjaPos.y;
+				scene.append(shuriken);
+				shuriken.start();
+				scene.asset.getAudioById("shotSE").play();
 
-			scene.setTimeout(function () {
-				shuriken.destroy();
-			}, 5000);
+				scene.setTimeout(function () {
+					shuriken.destroy();
+				}, 5000);
 
-			shurikens.push(shuriken);
-		}
+				// destroyしたものを配列から除く
+				for (let i = 0; i < shurikens.length; i++) {
+					if (shurikens[i].destroyed()) {
+						shurikens.splice(i, 1);
+						i--;
+					}
+				}
+				//console.log("shurikens.length:" + shurikens.length);
 
-		if (ninjaPos.x < lastX) {
-			ninjaPos.x += 2;
+				shurikens.push(shuriken);
+			}
+
+			if (ninjaPlayer.ninjaPos.x < ninjaPlayer.lastX) {
+				ninjaPlayer.ninjaPos.x += 2;
+			}
+			if (ninjaPlayer.ninjaPos.x > ninjaPlayer.lastX) {
+				ninjaPlayer.ninjaPos.x -= 2;
+			}
+			if (ninjaPlayer.ninjaPos.y < ninjaPlayer.lastY) {
+				ninjaPlayer.ninjaPos.y += 2;
+			}
+			if (ninjaPlayer.ninjaPos.y > ninjaPlayer.lastY) {
+				ninjaPlayer.ninjaPos.y -= 2;
+			}
+			ninjaPlayer.ninja.x = ninjaPlayer.ninjaPos.x;
+			ninjaPlayer.ninja.y = ninjaPlayer.ninjaPos.y;
 		}
-		if (ninjaPos.x > lastX) {
-			ninjaPos.x -= 2;
-		}
-		if (ninjaPos.y < lastY) {
-			ninjaPos.y += 2;
-		}
-		if (ninjaPos.y > lastY) {
-			ninjaPos.y -= 2;
-		}
-		ninja.x = ninjaPos.x;
-		ninja.y = ninjaPos.y;
 	}
 
 	// enemy move
@@ -259,17 +321,18 @@ function mainLoop(scene, ev, isPointPress) {
 	}
 
 	// player attack
-	for (let i = 0; i < shurikens.length; i++) {
-		shurikens[i].x += 4;
+	//for (let i = 0; i < shurikens.length; i++) {
+	for (let shuriken of shurikens) {
+		shuriken.x += 4;
 		if (!enemySprite.visible()) {
 			continue;
 		}
 
-		let isHitHead = g.Collision.intersect(shurikens[i].x + 4, shurikens[i].y + 4, 24, 24, enemySprite.x + 6, enemySprite.y + 20, 64, 36);
-		let isHitBody = g.Collision.intersect(shurikens[i].x + 4, shurikens[i].y + 4, 24, 24, enemySprite.x + 71, enemySprite.y + 44, 104, 40);
+		let isHitHead = g.Collision.intersect(shuriken.x + 4, shuriken.y + 4, 24, 24, enemySprite.x + 6, enemySprite.y + 20, 64, 36);
+		let isHitBody = g.Collision.intersect(shuriken.x + 4, shuriken.y + 4, 24, 24, enemySprite.x + 71, enemySprite.y + 44, 104, 40);
 
-		if (shurikens[i].visible() && (isHitHead || isHitBody)) {
-			shurikens[i].hide();
+		if (shuriken.visible() && (isHitHead || isHitBody)) {
+			shuriken.hide();
 
 			scene.asset.getAudioById("explosionSE").play();
 
@@ -280,8 +343,8 @@ function mainLoop(scene, ev, isPointPress) {
 				height: 16,
 				srcWidth: 16,
 				srcHeight: 16,
-				x: shurikens[i].x, // centerXとか欲しい...
-				y: shurikens[i].y,
+				x: shuriken.x,
+				y: shuriken.y,
 				frames: [0, 1, 2],
 				loop: true,
 				scaleX: 2,
@@ -305,46 +368,70 @@ function mainLoop(scene, ev, isPointPress) {
 
 	// enemy attack
 	if (enemyAttackTime > 0 && !isNinjaDead && !isEnemyDead) {
-		enemyAttackTime--;
+		enemyAttackTime--; //TODO:フレーム数でなく時間でやる
 		if (enemyAttackTime === 0) {
-			enemyAttackTime = Math.floor(xorshift.generate() * 50 + 100);
-			enemyBullet = new g.FrameSprite({
-				scene: scene,
-				src: scene.asset.getImageById("bullet"),
-				width: 16,
-				height: 16,
-				srcWidth: 16,
-				srcHeight: 16,
-				x: enemySprite.x + 10,
-				y: enemySprite.y + 16,
-				frames: [0, 0, 0, 0, 0, 1, 1, 1, 1, 1], // いったんこれで
-				loop: true,
-				scaleX: 2,
-				scaleY: 2,
-				//interval: 200
-			});
-			scene.append(enemyBullet);
-			enemyBullet.start();
-			/* いったんこれで
-			scene.setTimeout(function () {
-				enemyBullet.destroy();
-			}, 5000);
-			*/
-			enemyBulletR = Math.atan2(ninja.y - enemyBullet.y, ninja.x - enemyBullet.x);
+			for (const ninjaPlayer of ninjaPlayers.values()) {
+				enemyAttackTime = Math.floor(xorshift.generate() * 50 + 100);
+				const enemyBullet = new g.FrameSprite({
+					scene: scene,
+					src: scene.asset.getImageById("bullet"),
+					width: 16,
+					height: 16,
+					srcWidth: 16,
+					srcHeight: 16,
+					x: enemySprite.x + 10,
+					y: enemySprite.y + 16,
+					frames: [0, 0, 0, 0, 0, 1, 1, 1, 1, 1], // いったんこれで
+					loop: true,
+					scaleX: 2,
+					scaleY: 2,
+					//interval: 200
+				});
+				scene.append(enemyBullet);
+				enemyBullet.start();
+
+				scene.setTimeout(function () {
+					if (!enemyBullet.destroyed()) {
+						enemyBullet.destroy();
+					}
+				}, 5000);
+
+				// destroyしたものを配列から除く
+				for (let i = 0; i < enemyBullets.length; i++) {
+					if (enemyBullets[i].enemyBullet.destroyed()) {
+						enemyBullets.splice(i, 1);
+						i--;
+					}
+				}
+				console.log("enemyBullets.length:" + enemyBullets.length);
+
+				const enemyBulletR = Math.atan2(ninjaPlayer.ninja.y - enemyBullet.y, ninjaPlayer.ninja.x - enemyBullet.x);
+				enemyBullets.push({ enemyBullet, r: enemyBulletR });
+			}
 		}
 	}
-	if (enemyBullet != null) {
+	for (const e of enemyBullets) {
+		if (e.enemyBullet.destroyed()) { // いったんこれで
+			continue;
+		}
+		const enemyBullet = e.enemyBullet;
+		const enemyBulletR = e.r;
 		enemyBullet.x += Math.cos(enemyBulletR) * 3;
 		enemyBullet.y += Math.sin(enemyBulletR) * 3;
 
-		// ninja damage
-		if (!isNinjaDead && g.Collision.intersect(ninja.x + 4, ninja.y + 4, 24, 24, enemyBullet.x + 4, enemyBullet.y + 4, 24, 24)) {
-			isNinjaDead = true;
-			enemyBullet.destroy();
-			ninja.hide();
-			explode(scene, ninja.x, ninja.y);
-			scene.asset.getAudioById("game_maoudamashii_2_boss08").stop();
-			scene.asset.getAudioById("explosionSE").play();
+		for (const playerId of ninjaPlayers.keys()) {
+			const ninjaPlayer = ninjaPlayers.get(playerId);
+			if (!isNinjaDead && g.Collision.intersect(ninjaPlayer.ninja.x + 4, ninjaPlayer.ninja.y + 4, 24, 24, enemyBullet.x + 4, enemyBullet.y + 4, 24, 24)) {
+				if (playerId === selfPlayerId) {
+					isNinjaDead = true;
+					scene.asset.getAudioById("game_maoudamashii_2_boss08").stop();
+				}
+				ninjaPlayer.ninja.hide();
+				ninjaPlayers.delete(playerId);
+				enemyBullet.destroy();
+				explode(scene, ninjaPlayer.ninja.x, ninjaPlayer.ninja.y);
+				scene.asset.getAudioById("explosionSE").play();
+			}
 		}
 	}
 
