@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "",
   "scripts": {
+    "build": "rimraf ./script && tsc",
     "start": "akashic-sandbox .",
     "lint": "eslint script",
     "test": "npm run lint",
@@ -13,8 +14,12 @@
   "license": "MIT",
   "devDependencies": {
     "@akashic/akashic-cli-export-html": "^1.3.5",
+    "@akashic/akashic-engine": "^3.0.4",
     "@akashic/akashic-sandbox": "~0.16.18",
+    "@types/node": "^14.14.31",
     "eslint": "7.7.0",
-    "rimraf": "^3.0.2"
-  }
+    "rimraf": "^3.0.2",
+    "typescript": "^4.2.3"
+  },
+  "dependencies": {}
 }
