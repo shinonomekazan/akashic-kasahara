@@ -389,7 +389,7 @@ function mainLoop(scene: g.Scene): void {
 						i--;
 					}
 				}
-				console.log("enemyBullets.length:" + enemyBullets.length);
+				//console.log("enemyBullets.length:" + enemyBullets.length);
 
 				const enemyBulletR = Math.atan2(ninjaPlayer.ninja.y - enemyBullet.y, ninjaPlayer.ninja.x - enemyBullet.x);
 				enemyBullets.push({ enemyBullet, r: enemyBulletR });
@@ -440,7 +440,7 @@ function mainLoop(scene: g.Scene): void {
 	}
 
 	// result
-	if (isEnemyDead) {
+	if (isEnemyDead && explosionCount <= 0) {
 		winLabel.show();
 		loseLabel.hide();
 	} else if (isNinjaDead) {
