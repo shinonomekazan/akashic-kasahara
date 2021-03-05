@@ -4,6 +4,8 @@
 //
 // NOTE: SE,BGMのファイル名にmaoudamashiiが含まれているのはは魔法魂のもの、他のSEは自作(使用ソフトはsfxr)
 
+import { PointUpEvent, Scene } from "@akashic/akashic-engine";
+
 interface NinjaPlayer {
 	lastEv: g.PointMoveEvent | g.PointDownEvent | null;
 	isPointPress: boolean;
@@ -53,7 +55,7 @@ function main(param: g.GameMainParameterObject): void {
 		size: 64
 	});
 
-	function createNinja(playerId: string) {
+	function createNinja(playerId: string): NinjaPlayer {
 		if (ninjaPlayers[playerId] != null) {
 			return null;
 		}
@@ -85,12 +87,10 @@ function main(param: g.GameMainParameterObject): void {
 		ninjaSprite.start();
 		characterLayer.append(ninjaPlayer.ninja);
 
-		console.log("id:" + playerId);
-
 		return ninjaPlayer;
 	}
 
-	scene.onLoad.add(function (ev) {
+	scene.onLoad.add(function (ev: Scene) {
 		g.game.audio.music.volume = 0.2;
 		g.game.audio.sound.volume = 0.4;
 
@@ -107,7 +107,7 @@ function main(param: g.GameMainParameterObject): void {
 		});
 		groundLayer.append(background);
 
-		scene.onPointUpCapture.add(function (ev) {
+		scene.onPointUpCapture.add(function (ev: PointUpEvent) {
 			createNinja(ev.player.id);
 			const ninjaPlayer = ninjaPlayers[ev.player.id];
 			if (ninjaPlayer == null) {
@@ -158,7 +158,7 @@ function main(param: g.GameMainParameterObject): void {
 		enemySprite.start();
 
 		// scene の onUpdate を設定し、毎フレーム実行する処理を記述
-		scene.onUpdate.add(function (ev) {
+		scene.onUpdate.add(function () {
 			mainLoop(scene);
 		});
 
@@ -237,12 +237,12 @@ let enemyMoveDirection = 0;
 let explosionCount = 0;
 const xorshift = new g.XorshiftRandomGenerator(13579);
 let enemyAttackTime = Math.floor(xorshift.generate() * 50 + 100);
-const enemyBullets: { enemyBullet: g.Sprite, r: number }[] = [];
+const enemyBullets: { enemyBullet: g.Sprite; r: number }[] = [];
 let isNinjaDead = false;
 let winLabel: g.Sprite = null;
 let loseLabel: g.Sprite = null;
 
-function mainLoop(scene: g.Scene) {
+function mainLoop(scene: g.Scene): void {
 	for (const playerId of Object.keys(ninjaPlayers)) {
 		const ninjaPlayer = ninjaPlayers[playerId];
 		// Player
@@ -269,7 +269,7 @@ function mainLoop(scene: g.Scene) {
 						i--;
 					}
 				}
-				//console.log("shurikens.length:" + shurikens.length);
+				// console.log("shurikens.length:" + shurikens.length);
 
 				shurikens.push(shuriken);
 			}
@@ -353,7 +353,7 @@ function mainLoop(scene: g.Scene) {
 
 	// enemy attack
 	if (enemyAttackTime > 0 && !isNinjaDead && !isEnemyDead) {
-		enemyAttackTime--; //TODO:フレーム数でなく時間でやる
+		enemyAttackTime--; // TODO:フレーム数でなく時間でやる
 		if (enemyAttackTime === 0) {
 			for (const playerId of Object.keys(ninjaPlayers)) {
 				const ninjaPlayer = ninjaPlayers[playerId];
@@ -371,7 +371,7 @@ function mainLoop(scene: g.Scene) {
 					loop: true,
 					scaleX: 2,
 					scaleY: 2,
-					//interval: 200
+					// interval: 200
 				});
 				scene.append(enemyBullet);
 				enemyBullet.start();
@@ -406,16 +406,19 @@ function mainLoop(scene: g.Scene) {
 		enemyBullet.y += Math.sin(enemyBulletR) * 3;
 
 		for (const playerId of Object.keys(ninjaPlayers)) {
-			const ninjaPlayer = ninjaPlayers[playerId];
-			if (!isNinjaDead && g.Collision.intersect(ninjaPlayer.ninja.x + 4, ninjaPlayer.ninja.y + 4, 24, 24, enemyBullet.x + 4, enemyBullet.y + 4, 24, 24)) {
+			const ninjaSprite = ninjaPlayers[playerId].ninja;
+			if (
+				!isNinjaDead &&
+				g.Collision.intersect(ninjaSprite.x + 4, ninjaSprite.y + 4, 24, 24, enemyBullet.x + 4, enemyBullet.y + 4, 24, 24)
+			) {
 				if (playerId === selfPlayerId) {
 					isNinjaDead = true;
 					scene.asset.getAudioById("game_maoudamashii_2_boss08").stop();
 				}
-				ninjaPlayer.ninja.hide();
+				ninjaSprite.hide();
 				delete ninjaPlayers[playerId];
 				enemyBullet.destroy();
-				explode(scene, ninjaPlayer.ninja.x, ninjaPlayer.ninja.y);
+				explode(scene, ninjaSprite.x, ninjaSprite.y);
 				scene.asset.getAudioById("explosionSE").play();
 			}
 		}
@@ -446,7 +449,7 @@ function mainLoop(scene: g.Scene) {
 	}
 }
 
-function createShuriken(scene: g.Scene) {
+function createShuriken(scene: g.Scene): g.FrameSprite {
 	return new g.FrameSprite({
 		scene: scene,
 		src: scene.asset.getImageById("shot"),
@@ -456,8 +459,8 @@ function createShuriken(scene: g.Scene) {
 		// 元画像のフレーム1つのサイズ
 		srcWidth: 32,
 		srcHeight: 32,
-		//x: ev.point.x - size / 2,
-		//y: ev.point.y - size / 2,
+		// x: ev.point.x - size / 2,
+		// y: ev.point.y - size / 2,
 		// アニメーションに利用するフレームのインデックス配列
 		// インデックスは元画像の左上から右にsrcWidthとsrcHeightの矩形を並べて数え上げ、右端に達したら一段下の左端から右下に達するまで繰り返す
 		frames: [0, 1],
