@@ -4,188 +4,31 @@
 //
 // NOTE: SE,BGMのファイル名にmaoudamashiiが含まれているのはは魔法魂のもの、他のSEは自作(使用ソフトはsfxr)
 
+import { Timeline } from "@akashic-extension/akashic-timeline";
 import { PointUpEvent, Scene } from "@akashic/akashic-engine";
 
 interface NinjaPlayer {
-	lastEv: g.PointMoveEvent | g.PointDownEvent | null;
 	isPointPress: boolean;
-	lastX: number;
-	lastY: number;
+	pointX: number;
+	pointY: number;
 	ninjaPos: {
 		x: number;
 		y: number;
 	};
 	ninja: g.FrameSprite;
+	zombie: number;
 }
 
 let selfPlayerId: string = null;
 const ninjaPlayers: { [key: string]: NinjaPlayer } = {};
 
-function main(param: g.GameMainParameterObject): void {
-	const scene = new g.Scene({
-		game: g.game,
-		// このシーンで利用するアセットのIDを列挙し、シーンに通知します
-		assetIds: [
-			"explosion",
-			"shot",
-			"player",
-			"enemy",
-			"bullet",
-			"background",
-			"shotSE",
-			"game_maoudamashii_2_boss08",
-			"se_maoudamashii_retro30",
-			"game_maoudamashii_9_jingle05",
-			"explosionSE",
-			"youWin",
-			"youLose",
-			"youWinJp",
-			"youLoseJp"
-		]
-	});
+const font = new g.DynamicFont({
+	game: g.game,
+	fontFamily: "sans-serif",
+	size: 64
+});
 
-	var groundLayer = new g.E({ scene: scene });
-	var characterLayer = new g.E({ scene: scene });
-	scene.append(groundLayer);
-	scene.append(characterLayer);
-
-	const font = new g.DynamicFont({
-		game: g.game,
-		fontFamily: "sans-serif",
-		size: 64
-	});
-
-	function createNinja(playerId: string): NinjaPlayer {
-		if (ninjaPlayers[playerId] != null) {
-			return null;
-		}
-		const ninjaSprite = new g.FrameSprite({
-			scene: scene,
-			src: scene.asset.getImageById("player"),
-			width: 64,
-			height: 32,
-			srcWidth: 64,
-			srcHeight: 32,
-			x: 40,
-			y: 240,
-			frames: [0, 0, 0, 0, 1, 1, 1, 1],
-			loop: true
-		});
-		const ninjaPlayer: NinjaPlayer = {
-			lastEv: null,
-			isPointPress: false,
-			lastX: 0,
-			lastY: 0,
-			ninjaPos: {
-				x: 40,
-				y: 240
-			},
-			ninja: ninjaSprite
-		};
-		ninjaPlayers[playerId] = ninjaPlayer;
-
-		ninjaSprite.start();
-		characterLayer.append(ninjaPlayer.ninja);
-
-		return ninjaPlayer;
-	}
-
-	scene.onLoad.add(function (ev: Scene) {
-		g.game.audio.music.volume = 0.2;
-		g.game.audio.sound.volume = 0.4;
-
-		selfPlayerId = ev.game.selfId;
-		createNinja(selfPlayerId);
-
-		const background = new g.Sprite({
-			scene: scene,
-			src: scene.asset.getImageById("background"),
-			x: 0,
-			y: 0,
-			scaleX: 2,
-			scaleY: 2,
-		});
-		groundLayer.append(background);
-
-		scene.onPointUpCapture.add(function (ev: PointUpEvent) {
-			createNinja(ev.player.id);
-			const ninjaPlayer = ninjaPlayers[ev.player.id];
-			if (ninjaPlayer == null) {
-				return;
-			}
-
-			ninjaPlayer.isPointPress = false;
-		});
-
-		scene.onPointMoveCapture.add(function (ev: g.PointMoveEvent) {
-			createNinja(ev.player.id);
-			const ninjaPlayer = ninjaPlayers[ev.player.id];
-			if (ninjaPlayer == null) {
-				return;
-			}
-
-			ninjaPlayer.lastEv = ev;
-			ninjaPlayer.lastX += ev.prevDelta.x;
-			ninjaPlayer.lastY += ev.prevDelta.y;
-		});
-		scene.onPointDownCapture.add(function (ev: g.PointDownEvent) {
-			createNinja(ev.player.id);
-			const ninjaPlayer = ninjaPlayers[ev.player.id];
-			if (ninjaPlayer == null) {
-				return;
-			}
-
-			ninjaPlayer.lastEv = ev;
-			ninjaPlayer.isPointPress = true;
-
-			ninjaPlayer.lastX = ev.point.x;
-			ninjaPlayer.lastY = ev.point.y;
-		});
-
-		enemySprite = new g.FrameSprite({
-			scene: scene,
-			src: scene.asset.getImageById("enemy"),
-			width: 192,
-			height: 128,
-			srcWidth: 192,
-			srcHeight: 128,
-			x: 280,
-			y: 200,
-			frames: [0, 0, 0, 0, 1, 1, 1, 1],
-			loop: true
-		});
-		characterLayer.append(enemySprite);
-		enemySprite.start();
-
-		// scene の onUpdate を設定し、毎フレーム実行する処理を記述
-		scene.onUpdate.add(function () {
-			mainLoop(scene);
-		});
-
-		// result
-		// TODO: 後でランダム切り替えする多分
-		winLabel = new g.Sprite({
-			scene: scene,
-			src: scene.asset.getImageById("youWinJp"),
-			y: 150
-		});
-		loseLabel = new g.Sprite({
-			scene: scene,
-			src: scene.asset.getImageById("youLoseJp"),
-			y: 150
-		});
-
-		winLabel.x = (480 - winLabel.width) / 2;
-		loseLabel.x = (480 - loseLabel.width) / 2;
-		scene.append(winLabel);
-		scene.append(loseLabel);
-		winLabel.hide();
-		loseLabel.hide();
-
-		scene.asset.getAudioById("game_maoudamashii_2_boss08").play();
-	});
-
-	// title scene
+function pushTitleScene(scene: g.Scene): void {
 	const titleScene = new g.Scene({
 		game: g.game
 	});
@@ -227,28 +70,236 @@ function main(param: g.GameMainParameterObject): void {
 	g.game.pushScene(titleScene);
 }
 
+
+function main(param: g.GameMainParameterObject): void {
+	const scene = new g.Scene({
+		game: g.game,
+		// このシーンで利用するアセットのIDを列挙し、シーンに通知します
+		assetIds: [
+			"explosion",
+			"shot",
+			"player",
+			"enemy",
+			"bullet",
+			"background",
+			"shotSE",
+			"game_maoudamashii_2_boss08",
+			"se_maoudamashii_retro30",
+			"game_maoudamashii_9_jingle05",
+			"explosionSE",
+			"youWin",
+			"youLose",
+			"youWinJp",
+			"youLoseJp"
+		]
+	});
+
+	var groundLayer = new g.E({ scene: scene });
+	var characterLayer = new g.E({ scene: scene });
+	scene.append(groundLayer);
+	scene.append(characterLayer);
+
+	function createNinja(playerId: string): NinjaPlayer {
+		if (ninjaPlayers[playerId] != null) {
+			return null;
+		}
+		const ninjaSprite = new g.FrameSprite({
+			scene: scene,
+			src: scene.asset.getImageById("player"),
+			width: 64,
+			height: 32,
+			srcWidth: 64,
+			srcHeight: 32,
+			x: 40,
+			y: 240,
+			frames: [0, 0, 0, 0, 1, 1, 1, 1],
+			loop: true
+		});
+		const ninjaPlayer: NinjaPlayer = {
+			isPointPress: false,
+			pointX: 0,
+			pointY: 0,
+			ninjaPos: {
+				x: 40,
+				y: 240
+			},
+			ninja: ninjaSprite,
+			zombie: 0
+		};
+		ninjaPlayers[playerId] = ninjaPlayer;
+
+		ninjaSprite.start();
+		characterLayer.append(ninjaPlayer.ninja);
+
+		return ninjaPlayer;
+	}
+
+	scene.onLoad.add(function (ev: Scene) {
+		g.game.audio.music.volume = 0.2;
+		g.game.audio.sound.volume = 0.4;
+
+		selfPlayerId = ev.game.selfId;
+		createNinja(selfPlayerId);
+
+		const background = new g.Sprite({
+			scene: scene,
+			src: scene.asset.getImageById("background"),
+			x: 0,
+			y: 0,
+			scaleX: 2,
+			scaleY: 2,
+		});
+		groundLayer.append(background);
+
+		scene.onPointUpCapture.add(function (ev: PointUpEvent) {
+			createNinja(ev.player.id);
+			const ninjaPlayer = ninjaPlayers[ev.player.id];
+			if (ninjaPlayer == null) {
+				return;
+			}
+
+			ninjaPlayer.isPointPress = false;
+			ninjaPlayer.pointX += ev.prevDelta.x;
+			ninjaPlayer.pointY += ev.prevDelta.y;
+		});
+
+		scene.onPointMoveCapture.add(function (ev: g.PointMoveEvent) {
+			createNinja(ev.player.id);
+			const ninjaPlayer = ninjaPlayers[ev.player.id];
+			if (ninjaPlayer == null) {
+				return;
+			}
+
+			ninjaPlayer.pointX += ev.prevDelta.x;
+			ninjaPlayer.pointY += ev.prevDelta.y;
+		});
+		scene.onPointDownCapture.add(function (ev: g.PointDownEvent) {
+			createNinja(ev.player.id);
+			const ninjaPlayer = ninjaPlayers[ev.player.id];
+			if (ninjaPlayer == null) {
+				return;
+			}
+
+			ninjaPlayer.isPointPress = true;
+
+			ninjaPlayer.pointX = ev.point.x;
+			ninjaPlayer.pointY = ev.point.y;
+		});
+
+		enemySprite = new g.FrameSprite({
+			scene: scene,
+			src: scene.asset.getImageById("enemy"),
+			width: 192,
+			height: 128,
+			srcWidth: 192,
+			srcHeight: 128,
+			x: 280,
+			y: 200,
+			frames: [0, 0, 0, 0, 1, 1, 1, 1],
+			loop: true
+		});
+		characterLayer.append(enemySprite);
+		enemySprite.start();
+
+		// enemy move settings
+		const timeline = new Timeline(scene);
+		timeline.create(enemySprite, { loop: true })
+			.moveY(80, 7000)
+			.moveY(80, 3000)
+			.moveY(320, 7000)
+			.moveY(320, 3000);
+
+		// scene の onUpdate を設定し、毎フレーム実行する処理を記述
+		scene.onUpdate.add(function () {
+			mainLoop(scene);
+		});
+
+		// result
+		winLabel = new g.Sprite({
+			scene: scene,
+			src: scene.asset.getImageById("youWinJp"),
+			y: 150
+		});
+
+		winLabel.x = (480 - winLabel.width) / 2;
+		scene.append(winLabel);
+		winLabel.hide();
+	});
+
+	pushTitleScene(scene);
+
+	scene.onMessage.add(function (msg) {
+		if (msg.data.playerId) {
+			createNinja(msg.data.playerId);
+		}
+	});
+
+	// TODO: ビットマップフォントにしたい
+	zombieLabel = new g.Label({
+		scene: scene,
+		font: font,
+		text: "",
+		fontSize: 16,
+		textColor: "white"
+	});
+	scene.append(zombieLabel);
+	zombieLabel.hide();
+}
+
+let zombieLabel: g.Label;
 const shurikens: g.Sprite[] = [];
 const shotInterval = 10;
 let shotFrameCount = 10;
 let enemySprite: g.FrameSprite = null;
 let robotHP = 50;
 let isEnemyDead = false;
-let enemyMoveDirection = 0;
 let explosionCount = 0;
 const xorshift = new g.XorshiftRandomGenerator(13579);
 let enemyAttackTime = Math.floor(xorshift.generate() * 50 + 100);
 const enemyBullets: { enemyBullet: g.Sprite; r: number }[] = [];
-let isNinjaDead = false;
 let winLabel: g.Sprite = null;
-let loseLabel: g.Sprite = null;
+let isSendFirstEvent = false;
 
 function mainLoop(scene: g.Scene): void {
+
+	if (!g.game.isSkipping && !isSendFirstEvent) {
+		// ゲーム開始時の初期位置をみんなに送る。NOTE:早送り中はイベントを送信できないもよう
+		g.game.raiseEvent(new g.MessageEvent({ playerId: selfPlayerId }));
+		scene.asset.getAudioById("game_maoudamashii_2_boss08").play();
+		isSendFirstEvent = true;
+	}
+
+	// zombie
 	for (const playerId of Object.keys(ninjaPlayers)) {
 		const ninjaPlayer = ninjaPlayers[playerId];
-		// Player
+		if (ninjaPlayer.zombie > 0) {
+			ninjaPlayer.zombie--;
+			if (ninjaPlayer.zombie === 0) {
+				ninjaPlayer.ninja.opacity = 1.0;
+				if (playerId === selfPlayerId) {
+					zombieLabel.hide();
+					scene.asset.getAudioById("game_maoudamashii_2_boss08").play();
+				}
+			} else {
+				ninjaPlayer.ninja.opacity = 0.2;
+				if (playerId === selfPlayerId) {
+					zombieLabel.show();
+					zombieLabel.x = ninjaPlayer.ninja.x + 12;
+					zombieLabel.y = ninjaPlayer.ninja.y - 16;
+					zombieLabel.text = "" + (Math.floor(ninjaPlayer.zombie / 30) + 1);
+					zombieLabel.invalidate();
+				}
+			}
+			continue;
+		}
+	}
+
+	// Player move & shot
+	for (const playerId of Object.keys(ninjaPlayers)) {
+		const ninjaPlayer = ninjaPlayers[playerId];
 		const isPointPress = ninjaPlayer.isPointPress;
-		if (isPointPress && !isNinjaDead) {
-			if (shotFrameCount + shotInterval < g.game.age) {
+		if (isPointPress) {
+			if ((ninjaPlayer.zombie === 0) && (shotFrameCount + shotInterval < g.game.age)) {
 				shotFrameCount = g.game.age;
 
 				const shuriken = createShuriken(scene);
@@ -269,40 +320,25 @@ function mainLoop(scene: g.Scene): void {
 						i--;
 					}
 				}
-				// console.log("shurikens.length:" + shurikens.length);
 
 				shurikens.push(shuriken);
 			}
 
-			if (ninjaPlayer.ninjaPos.x < ninjaPlayer.lastX) {
+			// TODO: タップ開始座標を基準に上下左右にしたい
+			if (ninjaPlayer.ninjaPos.x < ninjaPlayer.pointX) {
 				ninjaPlayer.ninjaPos.x += 2;
 			}
-			if (ninjaPlayer.ninjaPos.x > ninjaPlayer.lastX) {
+			if (ninjaPlayer.ninjaPos.x > ninjaPlayer.pointX) {
 				ninjaPlayer.ninjaPos.x -= 2;
 			}
-			if (ninjaPlayer.ninjaPos.y < ninjaPlayer.lastY) {
+			if (ninjaPlayer.ninjaPos.y < ninjaPlayer.pointY) {
 				ninjaPlayer.ninjaPos.y += 2;
 			}
-			if (ninjaPlayer.ninjaPos.y > ninjaPlayer.lastY) {
+			if (ninjaPlayer.ninjaPos.y > ninjaPlayer.pointY) {
 				ninjaPlayer.ninjaPos.y -= 2;
 			}
 			ninjaPlayer.ninja.x = ninjaPlayer.ninjaPos.x;
 			ninjaPlayer.ninja.y = ninjaPlayer.ninjaPos.y;
-		}
-	}
-
-	// enemy move
-	if (!isEnemyDead) {
-		if (enemyMoveDirection === 0) {
-			enemySprite.y += 0.5;
-			if (enemySprite.y > 320) {
-				enemyMoveDirection = 1;
-			}
-		} else {
-			enemySprite.y -= 0.5;
-			if (enemySprite.y < 80) {
-				enemyMoveDirection = 0;
-			}
 		}
 	}
 
@@ -313,8 +349,8 @@ function mainLoop(scene: g.Scene): void {
 			continue;
 		}
 
-		let isHitHead = g.Collision.intersect(shuriken.x + 4, shuriken.y + 4, 24, 24, enemySprite.x + 6, enemySprite.y + 20, 64, 36);
-		let isHitBody = g.Collision.intersect(shuriken.x + 4, shuriken.y + 4, 24, 24, enemySprite.x + 71, enemySprite.y + 44, 104, 40);
+		const isHitHead = g.Collision.intersect(shuriken.x + 4, shuriken.y + 4, 24, 24, enemySprite.x + 6, enemySprite.y + 20, 64, 36);
+		const isHitBody = g.Collision.intersect(shuriken.x + 4, shuriken.y + 4, 24, 24, enemySprite.x + 71, enemySprite.y + 44, 104, 40);
 
 		if (shuriken.visible() && (isHitHead || isHitBody)) {
 			shuriken.hide();
@@ -352,12 +388,15 @@ function mainLoop(scene: g.Scene): void {
 	}
 
 	// enemy attack
-	if (enemyAttackTime > 0 && !isNinjaDead && !isEnemyDead) {
+	if (enemyAttackTime > 0 && !isEnemyDead) {
 		enemyAttackTime--; // TODO:フレーム数でなく時間でやる
 		if (enemyAttackTime === 0) {
+			enemyAttackTime = Math.floor(xorshift.generate() * 50 + 100);
 			for (const playerId of Object.keys(ninjaPlayers)) {
 				const ninjaPlayer = ninjaPlayers[playerId];
-				enemyAttackTime = Math.floor(xorshift.generate() * 50 + 100);
+				if (ninjaPlayer.zombie > 0) {
+					continue;
+				}
 				const enemyBullet = new g.FrameSprite({
 					scene: scene,
 					src: scene.asset.getImageById("bullet"),
@@ -389,7 +428,6 @@ function mainLoop(scene: g.Scene): void {
 						i--;
 					}
 				}
-				//console.log("enemyBullets.length:" + enemyBullets.length);
 
 				const enemyBulletR = Math.atan2(ninjaPlayer.ninja.y - enemyBullet.y, ninjaPlayer.ninja.x - enemyBullet.x);
 				enemyBullets.push({ enemyBullet, r: enemyBulletR });
@@ -404,23 +442,25 @@ function mainLoop(scene: g.Scene): void {
 		const enemyBulletR = e.r;
 		enemyBullet.x += Math.cos(enemyBulletR) * 3;
 		enemyBullet.y += Math.sin(enemyBulletR) * 3;
+		let isHit = false;
 
 		for (const playerId of Object.keys(ninjaPlayers)) {
 			const ninjaSprite = ninjaPlayers[playerId].ninja;
 			if (
-				!isNinjaDead &&
+				ninjaPlayers[playerId].zombie === 0 &&
 				g.Collision.intersect(ninjaSprite.x + 4, ninjaSprite.y + 4, 24, 24, enemyBullet.x + 4, enemyBullet.y + 4, 24, 24)
 			) {
-				if (playerId === selfPlayerId) {
-					isNinjaDead = true;
-					scene.asset.getAudioById("game_maoudamashii_2_boss08").stop();
-				}
-				ninjaSprite.hide();
-				delete ninjaPlayers[playerId];
-				enemyBullet.destroy();
+				isHit = true;
 				explode(scene, ninjaSprite.x, ninjaSprite.y);
 				scene.asset.getAudioById("explosionSE").play();
+				ninjaPlayers[playerId].zombie = 30 * 5;
+				if (playerId === selfPlayerId) {
+					scene.asset.getAudioById("game_maoudamashii_2_boss08").stop();
+				}
 			}
+		}
+		if (isHit) {
+			destroySprite(enemyBullet);
 		}
 	}
 
@@ -442,10 +482,6 @@ function mainLoop(scene: g.Scene): void {
 	// result
 	if (isEnemyDead && explosionCount <= 0) {
 		winLabel.show();
-		loseLabel.hide();
-	} else if (isNinjaDead) {
-		winLabel.hide();
-		loseLabel.show();
 	}
 }
 
@@ -468,6 +504,12 @@ function createShuriken(scene: g.Scene): g.FrameSprite {
 		loop: true,
 		interval: 100
 	});
+}
+
+function destroySprite(sprite: g.Sprite): void {
+	if (!sprite.destroyed()) {
+		sprite.destroy();
+	}
 }
 
 function explode(scene: g.Scene, x: number, y: number): void {
