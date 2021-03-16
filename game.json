@@ -109,5 +109,13 @@
 	"moduleMainScripts": {},
 	"environment": {
 		"sandbox-runtime": "3"
-	}
+	},
+	"globalScripts": [
+		"node_modules/@akashic-extension/akashic-timeline/lib/Easing.js",
+		"node_modules/@akashic-extension/akashic-timeline/lib/Timeline.js",
+		"node_modules/@akashic-extension/akashic-timeline/lib/Tween.js",
+		"node_modules/@akashic-extension/akashic-timeline/lib/ActionType.js",
+		"node_modules/@akashic-extension/akashic-timeline/lib/index.js",
+		"node_modules/@akashic-extension/akashic-timeline/package.json"
+	]
 }
