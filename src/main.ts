@@ -17,6 +17,7 @@ interface NinjaPlayer {
 	};
 	ninja: g.FrameSprite;
 	zombie: number;
+	shotFrameCount: number;
 }
 
 let selfPlayerId: string = null;
@@ -28,7 +29,9 @@ const font = new g.DynamicFont({
 	size: 64
 });
 
-function pushTitleScene(scene: g.Scene): void {
+let characterLayer: g.E = null;
+
+function createTitleScene(scene: g.Scene): g.Scene {
 	const titleScene = new g.Scene({
 		game: g.game
 	});
@@ -65,11 +68,48 @@ function pushTitleScene(scene: g.Scene): void {
 
 		titleScene.onPointDownCapture.add(function () {
 			g.game.replaceScene(scene);
+			init();
 		});
 	});
-	g.game.pushScene(titleScene);
+	// g.game.pushScene(titleScene);
+	return titleScene;
 }
 
+function createNinja(scene: g.Scene, characterLayer: g.E, playerId: string): NinjaPlayer {
+	if (ninjaPlayers[playerId] != null) {
+		return ninjaPlayers[playerId];
+	}
+	const ninjaSprite = new g.FrameSprite({
+		scene: scene,
+		src: scene.asset.getImageById("player"),
+		width: 64,
+		height: 32,
+		srcWidth: 64,
+		srcHeight: 32,
+		x: 40,
+		y: 240,
+		frames: [0, 0, 0, 0, 1, 1, 1, 1],
+		loop: true
+	});
+	const ninjaPlayer: NinjaPlayer = {
+		isPointPress: false,
+		pointX: 0,
+		pointY: 0,
+		ninjaPos: {
+			x: 40,
+			y: 240
+		},
+		ninja: ninjaSprite,
+		zombie: 0,
+		shotFrameCount: 10
+	};
+	ninjaPlayers[playerId] = ninjaPlayer;
+
+	ninjaSprite.start();
+	characterLayer.append(ninjaPlayer.ninja);
+
+	return ninjaPlayer;
+}
 
 function main(param: g.GameMainParameterObject): void {
 	const scene = new g.Scene({
@@ -94,52 +134,19 @@ function main(param: g.GameMainParameterObject): void {
 		]
 	});
 
-	var groundLayer = new g.E({ scene: scene });
-	var characterLayer = new g.E({ scene: scene });
+	const groundLayer = new g.E({ scene: scene });
+	characterLayer = new g.E({ scene: scene });
 	scene.append(groundLayer);
 	scene.append(characterLayer);
 
-	function createNinja(playerId: string): NinjaPlayer {
-		if (ninjaPlayers[playerId] != null) {
-			return null;
-		}
-		const ninjaSprite = new g.FrameSprite({
-			scene: scene,
-			src: scene.asset.getImageById("player"),
-			width: 64,
-			height: 32,
-			srcWidth: 64,
-			srcHeight: 32,
-			x: 40,
-			y: 240,
-			frames: [0, 0, 0, 0, 1, 1, 1, 1],
-			loop: true
-		});
-		const ninjaPlayer: NinjaPlayer = {
-			isPointPress: false,
-			pointX: 0,
-			pointY: 0,
-			ninjaPos: {
-				x: 40,
-				y: 240
-			},
-			ninja: ninjaSprite,
-			zombie: 0
-		};
-		ninjaPlayers[playerId] = ninjaPlayer;
 
-		ninjaSprite.start();
-		characterLayer.append(ninjaPlayer.ninja);
-
-		return ninjaPlayer;
-	}
 
 	scene.onLoad.add(function (ev: Scene) {
-		g.game.audio.music.volume = 0.2;
-		g.game.audio.sound.volume = 0.4;
+		g.game.audio.music.volume = 0.1;
+		g.game.audio.sound.volume = 0.2;
 
 		selfPlayerId = ev.game.selfId;
-		createNinja(selfPlayerId);
+		// createNinja(selfPlayerId);
 
 		const background = new g.Sprite({
 			scene: scene,
@@ -152,8 +159,7 @@ function main(param: g.GameMainParameterObject): void {
 		groundLayer.append(background);
 
 		scene.onPointUpCapture.add(function (ev: PointUpEvent) {
-			createNinja(ev.player.id);
-			const ninjaPlayer = ninjaPlayers[ev.player.id];
+			const ninjaPlayer = createNinja(scene, characterLayer, ev.player.id);
 			if (ninjaPlayer == null) {
 				return;
 			}
@@ -164,8 +170,7 @@ function main(param: g.GameMainParameterObject): void {
 		});
 
 		scene.onPointMoveCapture.add(function (ev: g.PointMoveEvent) {
-			createNinja(ev.player.id);
-			const ninjaPlayer = ninjaPlayers[ev.player.id];
+			const ninjaPlayer = createNinja(scene, characterLayer, ev.player.id);
 			if (ninjaPlayer == null) {
 				return;
 			}
@@ -174,8 +179,7 @@ function main(param: g.GameMainParameterObject): void {
 			ninjaPlayer.pointY += ev.prevDelta.y;
 		});
 		scene.onPointDownCapture.add(function (ev: g.PointDownEvent) {
-			createNinja(ev.player.id);
-			const ninjaPlayer = ninjaPlayers[ev.player.id];
+			const ninjaPlayer = createNinja(scene, characterLayer, ev.player.id);
 			if (ninjaPlayer == null) {
 				return;
 			}
@@ -195,8 +199,9 @@ function main(param: g.GameMainParameterObject): void {
 			srcHeight: 128,
 			x: 280,
 			y: 200,
-			frames: [0, 0, 0, 0, 1, 1, 1, 1],
-			loop: true
+			frames: [0, 1],
+			loop: true,
+			interval: 200
 		});
 		characterLayer.append(enemySprite);
 		enemySprite.start();
@@ -224,13 +229,19 @@ function main(param: g.GameMainParameterObject): void {
 		winLabel.x = (480 - winLabel.width) / 2;
 		scene.append(winLabel);
 		winLabel.hide();
+
+		winLabel.touchable = true;
+		winLabel.onPointUp.add(function (ev: PointUpEvent) {
+			const titleScene = createTitleScene(scene);
+			g.game.pushScene(titleScene);
+			scene.asset.getAudioById("game_maoudamashii_2_boss08").stop();
+			scene.asset.getAudioById("game_maoudamashii_9_jingle05").stop();
+		});
 	});
 
-	pushTitleScene(scene);
-
-	scene.onMessage.add(function (msg) {
+	scene.onMessage.add(function (msg: g.MessageEvent) {
 		if (msg.data.playerId) {
-			createNinja(msg.data.playerId);
+			createNinja(scene, characterLayer, msg.data.playerId);
 		}
 	});
 
@@ -244,12 +255,42 @@ function main(param: g.GameMainParameterObject): void {
 	});
 	scene.append(zombieLabel);
 	zombieLabel.hide();
+
+	// title
+	const titleScene = createTitleScene(scene);
+	g.game.pushScene(titleScene);
+}
+
+function init(): void {
+	robotHP = 50;
+	isEnemyDead = false;
+	explosionCount = 0;
+	isSendFirstEvent = false;
+
+	if (enemySprite) { // うーん、いったん
+		enemySprite.x = 280;
+		enemySprite.y = 200;
+		enemySprite.show();
+	}
+	enemyAttackTime = Math.floor(xorshift.generate() * 50 + 100);
+
+	if (winLabel) {
+		winLabel.hide();
+	}
+
+	shurikens.forEach(function (shuriken: g.Sprite) {
+		destroySprite(shuriken);
+	});
+	shurikens = [];
+	for (const playerId of Object.keys(ninjaPlayers)) {
+		const ninjaPlayer = ninjaPlayers[playerId];
+		ninjaPlayer.shotFrameCount = 10;
+	}
 }
 
 let zombieLabel: g.Label;
-const shurikens: g.Sprite[] = [];
+let shurikens: g.Sprite[] = [];
 const shotInterval = 10;
-let shotFrameCount = 10;
 let enemySprite: g.FrameSprite = null;
 let robotHP = 50;
 let isEnemyDead = false;
@@ -261,7 +302,6 @@ let winLabel: g.Sprite = null;
 let isSendFirstEvent = false;
 
 function mainLoop(scene: g.Scene): void {
-
 	if (!g.game.isSkipping && !isSendFirstEvent) {
 		// ゲーム開始時の初期位置をみんなに送る。NOTE:早送り中はイベントを送信できないもよう
 		g.game.raiseEvent(new g.MessageEvent({ playerId: selfPlayerId }));
@@ -269,7 +309,7 @@ function mainLoop(scene: g.Scene): void {
 		isSendFirstEvent = true;
 	}
 
-	// zombie
+	// player zombie
 	for (const playerId of Object.keys(ninjaPlayers)) {
 		const ninjaPlayer = ninjaPlayers[playerId];
 		if (ninjaPlayer.zombie > 0) {
@@ -278,7 +318,9 @@ function mainLoop(scene: g.Scene): void {
 				ninjaPlayer.ninja.opacity = 1.0;
 				if (playerId === selfPlayerId) {
 					zombieLabel.hide();
-					scene.asset.getAudioById("game_maoudamashii_2_boss08").play();
+					if (!winLabel.visible()) {
+						scene.asset.getAudioById("game_maoudamashii_2_boss08").play();
+					}
 				}
 			} else {
 				ninjaPlayer.ninja.opacity = 0.2;
@@ -299,8 +341,8 @@ function mainLoop(scene: g.Scene): void {
 		const ninjaPlayer = ninjaPlayers[playerId];
 		const isPointPress = ninjaPlayer.isPointPress;
 		if (isPointPress) {
-			if ((ninjaPlayer.zombie === 0) && (shotFrameCount + shotInterval < g.game.age)) {
-				shotFrameCount = g.game.age;
+			if ((ninjaPlayer.zombie === 0) && (ninjaPlayer.shotFrameCount + shotInterval < g.game.age)) {
+				ninjaPlayer.shotFrameCount = g.game.age;
 
 				const shuriken = createShuriken(scene);
 				shuriken.x = ninjaPlayer.ninjaPos.x + 32;
@@ -310,7 +352,7 @@ function mainLoop(scene: g.Scene): void {
 				scene.asset.getAudioById("shotSE").play();
 
 				scene.setTimeout(function () {
-					shuriken.destroy();
+					destroySprite(shuriken);
 				}, 5000);
 
 				// destroyしたものを配列から除く
@@ -343,7 +385,7 @@ function mainLoop(scene: g.Scene): void {
 	}
 
 	// player attack
-	for (let shuriken of shurikens) {
+	for (const shuriken of shurikens) {
 		shuriken.x += 4;
 		if (!enemySprite.visible()) {
 			continue;
