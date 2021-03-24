@@ -4,6 +4,21 @@
 	"fps": 30,
 	"main": "./script/main.js",
 	"assets": {
+		"main": {
+			"type": "script",
+			"path": "script/main.js",
+			"global": true
+		},
+		"TitleScreen": {
+			"type": "script",
+			"path": "script/TitleScene.js",
+			"global": true
+		},
+		"MainScene": {
+			"type": "script",
+			"path": "script/MainScene.js",
+			"global": true
+		},
 		"explosion": {
 			"type": "image",
 			"width": 48,
@@ -24,6 +39,12 @@
 		},
 		"enemy": {
 			"type": "image",
+			"width": 128,
+			"height": 32,
+			"path": "image/enemy.png"
+		},
+		"boss": {
+			"type": "image",
 			"width": 384,
 			"height": 128,
 			"path": "image/robot_dog.png"
@@ -36,7 +57,7 @@
 		},
 		"background": {
 			"type": "image",
-			"width": 240,
+			"width": 432,
 			"height": 240,
 			"path": "image/background.png"
 		},
@@ -64,10 +85,11 @@
 			"height": 80,
 			"path": "image/20210202_YOULOSE1_JP.png"
 		},
-		"main": {
-			"type": "script",
-			"path": "script/main.js",
-			"global": true
+		"powerup": {
+			"type": "image",
+			"width": 64,
+			"height": 32,
+			"path": "image/powerup.png"
 		},
 		"game_maoudamashii_2_boss08": {
 			"type": "audio",
@@ -104,6 +126,18 @@
 			"path": "audio/se/shotSE",
 			"systemId": "sound",
 			"duration": 157
+		},
+		"game_maoudamashii_1_battle01": {
+			"type": "audio",
+			"path": "audio/bgm/game_maoudamashii_1_battle01",
+			"systemId": "sound",
+			"duration": 94120
+		},
+		"powerup07": {
+			"type": "audio",
+			"path": "audio/se/powerup07",
+			"systemId": "sound",
+			"duration": 575
 		}
 	},
 	"moduleMainScripts": {},
