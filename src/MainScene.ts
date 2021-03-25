@@ -1,5 +1,5 @@
 import { Timeline, Tween } from "@akashic-extension/akashic-timeline";
-import { PointUpEvent } from "@akashic/akashic-engine";
+import { E, PointUpEvent } from "@akashic/akashic-engine";
 
 interface NinjaPlayer {
 	isPointPress: boolean;
@@ -24,7 +24,8 @@ const font = new g.DynamicFont({
 class MainScene extends g.Scene {
 
 	ninjaPlayers: { [key: string]: NinjaPlayer } = {};
-
+	groundLayer: E;
+	characterLayer: E;
 	zombieLabel: g.Label;
 	shurikens: g.Sprite[] = [];
 	enemySprites: g.FrameSprite[] = [];
@@ -66,7 +67,8 @@ class MainScene extends g.Scene {
 				"youWinJp",
 				"youLoseJp",
 				"powerup",
-				"powerup07"
+				"powerup07",
+				"powerup_effect"
 			]
 		});
 		this.finishFunc = finishFunc;
@@ -75,13 +77,13 @@ class MainScene extends g.Scene {
 	handleLoad() {
 		const scene = this;
 
-		const groundLayer = new g.E({ scene: scene });
-		const characterLayer = new g.E({ scene: scene });
-		scene.append(groundLayer);
-		scene.append(characterLayer);
+		this.groundLayer = new g.E({ scene: scene });
+		this.characterLayer = new g.E({ scene: scene });
+		scene.append(this.groundLayer);
+		scene.append(this.characterLayer);
 
 		scene.onPointMoveCapture.add(function (ev: g.PointMoveEvent) {
-			const ninjaPlayer = this.createNinja(scene, characterLayer, ev.player.id);
+			const ninjaPlayer = this.createNinja(scene, this.characterLayer, ev.player.id);
 			if (ninjaPlayer == null) {
 				return;
 			}
@@ -90,7 +92,7 @@ class MainScene extends g.Scene {
 			ninjaPlayer.pointY += ev.prevDelta.y;
 		}, this);
 		scene.onPointUpCapture.add(function (ev: PointUpEvent) {
-			const ninjaPlayer = this.createNinja(scene, characterLayer, ev.player.id);
+			const ninjaPlayer = this.createNinja(scene, this.characterLayer, ev.player.id);
 			if (ninjaPlayer == null) {
 				return;
 			}
@@ -100,7 +102,7 @@ class MainScene extends g.Scene {
 			ninjaPlayer.pointY += ev.prevDelta.y;
 		}, this);
 		scene.onPointDownCapture.add(function (ev: g.PointDownEvent) {
-			const ninjaPlayer = this.createNinja(scene, characterLayer, ev.player.id);
+			const ninjaPlayer = this.createNinja(scene, this.characterLayer, ev.player.id);
 			if (ninjaPlayer == null) {
 				return;
 			}
@@ -122,9 +124,9 @@ class MainScene extends g.Scene {
 			scaleY: 2,
 		});
 
-		groundLayer.append(background);
+		this.groundLayer.append(background);
 
-		this.groundScrollTween = this.timeline.create(background, { loop: true }).moveX(-384, 384 * 2000 / 30).moveX(0, 0);
+		this.groundScrollTween = this.timeline.create(background, { loop: true }).moveX(-384, 384 * 2000 / this.game.fps).moveX(0, 0);
 
 		const enemyPositionData = [
 			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1],
@@ -150,9 +152,9 @@ class MainScene extends g.Scene {
 						interval: 200
 					});
 					sprite.start();
-					characterLayer.append(sprite);
+					this.characterLayer.append(sprite);
 
-					this.timeline.create(sprite).moveX(-32, (sprite.x + 32) * 1000 / 30);
+					this.timeline.create(sprite).moveX(-32, (sprite.x + 32) * 1000 / this.game.fps);
 
 					this.enemySprites.push(sprite);
 				} else if (enemyPositionData[y][x] === 2) {
@@ -170,10 +172,10 @@ class MainScene extends g.Scene {
 						interval: 200
 					});
 					sprite.start();
-					characterLayer.append(sprite);
+					this.characterLayer.append(sprite);
 
-					this.timeline.create(sprite).moveX(-32, (sprite.x + 32) * 1000 / 30);
-					this.timeline.create(sprite, {loop: true}).moveY(sprite.y - 16, 1000).moveY(sprite.y + 16, 1000);
+					this.timeline.create(sprite).moveX(-32, (sprite.x + 32) * 1000 / this.game.fps);
+					this.timeline.create(sprite, { loop: true }).moveY(sprite.y - 16, 1000).moveY(sprite.y + 16, 1000);
 
 					this.enemySprites.push(sprite);
 				}
@@ -193,14 +195,14 @@ class MainScene extends g.Scene {
 			loop: true,
 			interval: 200
 		});
-		characterLayer.append(this.bossSprite);
+		this.characterLayer.append(this.bossSprite);
 		this.bossSprite.start();
 
-		this.enemyAttackTime = 100 * 30;
+		this.enemyAttackTime = 100 * this.game.fps;
 
 		// boss move settings
 		this.bossTween = this.timeline.create(this.bossSprite, { loop: false })
-			.moveX(280, (this.bossSprite.x + 32) * 1000 / 30);
+			.moveX(280, (this.bossSprite.x + 32) * 1000 / this.game.fps);
 
 		// TODO: ビットマップフォントにしたい
 		this.zombieLabel = new g.Label({
@@ -215,7 +217,7 @@ class MainScene extends g.Scene {
 
 		scene.onMessage.add(function (msg: g.MessageEvent) {
 			if (msg.data.playerId) {
-				this.createNinja(scene, characterLayer, msg.data.playerId);
+				this.createNinja(scene, this.characterLayer, msg.data.playerId);
 			}
 		}, this);
 
@@ -307,7 +309,7 @@ class MainScene extends g.Scene {
 						this.zombieLabel.show();
 						this.zombieLabel.x = ninjaPlayer.ninja.x + 12;
 						this.zombieLabel.y = ninjaPlayer.ninja.y - 16;
-						this.zombieLabel.text = "" + (Math.floor(ninjaPlayer.zombie / 30) + 1);
+						this.zombieLabel.text = "" + (Math.floor(ninjaPlayer.zombie / this.game.fps) + 1);
 						this.zombieLabel.invalidate();
 					}
 				}
@@ -372,6 +374,7 @@ class MainScene extends g.Scene {
 				if (isHit) {
 					if (ninjaPlayer.shotInterval > 1) {
 						ninjaPlayer.shotInterval--;
+						this.createPowerupEffect(ninjaSprite);
 					}
 					isUsed = true;
 					scene.asset.getAudioById("powerup07").play();
@@ -442,18 +445,19 @@ class MainScene extends g.Scene {
 				if (isHit && ninjaPlayer.zombie <= 0) {
 					this.explode(scene, ninjaSprite.x, ninjaSprite.y);
 					scene.asset.getAudioById("explosionSE").play();
-					ninjaPlayer.zombie = 30 * 5;
+					ninjaPlayer.zombie = this.game.fps * 5;
+					ninjaPlayer.shotInterval = 20;
 				}
 			}
 		}
 
-		// show boss
+		// show boss, move setting
 		if (this.bossTween.isFinished()) {
 			this.bossTween = this.timeline.create(this.bossSprite, { loop: true })
-			.moveY(80, 7000)
-			.moveY(80, 3000)
-			.moveY(320, 7000)
-			.moveY(320, 3000);
+				.moveY(80, 7000)
+				.moveY(80, 3000)
+				.moveY(320, 7000)
+				.moveY(320, 3000);
 		}
 		if (this.bossSprite.x < 480 && !this.isShowBoss) {
 			this.isShowBoss = true;
@@ -464,7 +468,7 @@ class MainScene extends g.Scene {
 
 		// boss attack
 		if (this.enemyAttackTime > 0 && !this.isEnemyDead) {
-			this.enemyAttackTime--; // TODO:フレーム数でなく時間でやる
+			this.enemyAttackTime--;
 			if (this.enemyAttackTime === 0) {
 				this.enemyAttackTime = Math.floor(this.xorshift.generate() * 50 + 100);
 				for (const playerId of Object.keys(this.ninjaPlayers)) {
@@ -529,7 +533,8 @@ class MainScene extends g.Scene {
 					isHit = true;
 					this.explode(scene, ninjaSprite.x, ninjaSprite.y);
 					scene.asset.getAudioById("explosionSE").play();
-					this.ninjaPlayers[playerId].zombie = 30 * 5;
+					this.ninjaPlayers[playerId].zombie = this.game.fps * 5;
+					this.ninjaPlayers[playerId].shotInterval = 20;
 					if (playerId === this.game.selfId) {
 						//scene.asset.getAudioById("game_maoudamashii_2_boss08").stop();
 					}
@@ -622,15 +627,42 @@ class MainScene extends g.Scene {
 			srcHeight: 32,
 			x: x,
 			y: y,
-			frames: [0, 1],
+			frames: [2, 3],
 			loop: true,
 			interval: 200
 		});
 		powerup.start();
 		this.powerups.push(powerup);
-		this.append(powerup);
+		this.groundLayer.append(powerup);
 		this.timeline.create(powerup, { loop: false })
-			.moveX(-32, (x + 32) * 2000 / 30);
+			.moveX(-32, (x + 32) * 2000 / this.game.fps);
+	}
+
+	createPowerupEffect(sprite: g.Sprite): void {
+		const effect = new g.FrameSprite({
+			scene: this,
+			src: this.asset.getImageById("powerup_effect"),
+			width: 32,
+			height: 32,
+			srcWidth: 32,
+			srcHeight: 32,
+			x: sprite.x,
+			y: sprite.y,
+			frames: [0, 1, 2],
+			loop: false,
+			interval: 200
+		});
+		effect.start();
+		this.characterLayer.append(effect);
+		this.onUpdate.add(function () {
+			effect.x = sprite.x;
+			effect.y = sprite.y;
+			if (effect.frameNumber === 2) {
+				effect.destroy();
+				return true;
+			}
+			return false;
+		});
 	}
 }
 

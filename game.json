@@ -87,9 +87,15 @@
 		},
 		"powerup": {
 			"type": "image",
-			"width": 64,
+			"width": 128,
 			"height": 32,
 			"path": "image/powerup.png"
+		},
+		"powerup_effect": {
+			"type": "image",
+			"width": 96,
+			"height": 32,
+			"path": "image/powerup_effect.png"
 		},
 		"game_maoudamashii_2_boss08": {
 			"type": "audio",
