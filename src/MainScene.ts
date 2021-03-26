@@ -289,7 +289,9 @@ class MainScene extends g.Scene {
 		if (!g.game.isSkipping && !this.isSendFirstEvent) {
 			// ゲーム開始時の初期位置をみんなに送る。NOTE:早送り中はイベントを送信できないもよう
 			g.game.raiseEvent(new g.MessageEvent({ playerId: this.game.selfId }));
-			scene.asset.getAudioById("game_maoudamashii_1_battle01").play();
+			if (!this.isShowBoss) {
+				scene.asset.getAudioById("game_maoudamashii_1_battle01").play();
+			}
 			this.isSendFirstEvent = true;
 		}
 
