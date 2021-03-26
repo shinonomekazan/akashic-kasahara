@@ -4,6 +4,9 @@
 //
 // NOTE: SE,BGMのファイル名にmaoudamashiiが含まれているのはは魔法魂のもの、他のSEは自作(使用ソフトはsfxr)
 
+// TODO: たまにcreatePlayerのエラーが出る。原因はわかってない。
+// TODO: ページクリックでBGM再生開始になったりするので再生タイミング、停止タイミングをなんとかしたい
+
 import MainScene = require('./MainScene');
 import TitleScene = require("./TitleScene");
 

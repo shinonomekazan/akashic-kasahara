@@ -34,9 +34,10 @@ class MainScene extends g.Scene {
 	bossHP = 150;
 	isEnemyDead = false;
 	explosionCount = 0;
-	readonly xorshift = new g.XorshiftRandomGenerator(13579);
+	xorshift = new g.XorshiftRandomGenerator(13579);
 	enemyAttackTime: number;
-	readonly enemyBullets: { enemyBullet: g.Sprite; r: number }[] = [];
+	bossAttackTime: number;
+	enemyBullets: { enemyBullet: g.Sprite; r: number }[] = [];
 	winLabel: g.Sprite = null;
 	isSendFirstEvent = false;
 	finishFunc: Function;
@@ -44,6 +45,7 @@ class MainScene extends g.Scene {
 	bossTween: Tween;
 	groundScrollTween: Tween;
 	isShowBoss: boolean = false;
+	powerUpTween: Tween[] = [];
 
 	constructor(game: g.Game, finishFunc: Function) {
 		super({
@@ -146,7 +148,7 @@ class MainScene extends g.Scene {
 						srcWidth: 32,
 						srcHeight: 32,
 						x: 480 + x * 48,
-						y: 108 + y * 64,
+						y: 108 + y * 64 + 4,
 						frames: [0, 1],
 						loop: true,
 						interval: 200
@@ -198,7 +200,8 @@ class MainScene extends g.Scene {
 		this.characterLayer.append(this.bossSprite);
 		this.bossSprite.start();
 
-		this.enemyAttackTime = 100 * this.game.fps;
+		this.enemyAttackTime = Math.floor(this.xorshift.generate() * this.game.fps * 3) + 1;
+		this.bossAttackTime = 100 * this.game.fps;
 
 		// boss move settings
 		this.bossTween = this.timeline.create(this.bossSprite, { loop: false })
@@ -392,6 +395,7 @@ class MainScene extends g.Scene {
 				this.destroySprite(shuriken);
 			}
 		}
+
 		// player attack to enemy
 		for (const shuriken of this.shurikens) {
 			for (const sprite of this.enemySprites) {
@@ -462,54 +466,42 @@ class MainScene extends g.Scene {
 		if (this.bossSprite.x < 480 && !this.isShowBoss) {
 			this.isShowBoss = true;
 			this.groundScrollTween.cancel();
+			this.stopPowerupItem();
 			scene.asset.getAudioById("game_maoudamashii_1_battle01").stop();
 			scene.asset.getAudioById("game_maoudamashii_2_boss08").play();
 		}
 
-		// boss attack
-		if (this.enemyAttackTime > 0 && !this.isEnemyDead) {
+		// enemy attack
+		if (this.enemyAttackTime > 0) {
 			this.enemyAttackTime--;
 			if (this.enemyAttackTime === 0) {
-				this.enemyAttackTime = Math.floor(this.xorshift.generate() * 50 + 100);
+				this.enemyAttackTime = Math.floor(this.xorshift.generate() * this.game.fps * 7) + this.game.fps * 7;
+				const enemies = this.enemySprites.filter(function (enemySprite: g.FrameSprite) {
+					return (!enemySprite.destroyed() && 0 < enemySprite.x && enemySprite.x < 480);
+				});
+				if (enemies.length > 0) {
+					const enemyIdx = Math.floor(this.xorshift.generate() * enemies.length);
+
+					const playerIdList = Object.keys(this.ninjaPlayers)
+					const idx = Math.floor(this.xorshift.generate() * playerIdList.length);
+					const ninjaPlayer = this.ninjaPlayers[playerIdList[idx]];
+
+					this.createEnemyBullet(enemies[enemyIdx].x, enemies[enemyIdx].y, ninjaPlayer.ninja.x, ninjaPlayer.ninja.y);
+				}
+			}
+		}
+
+		// boss attack
+		if (this.bossAttackTime > 0 && !this.isEnemyDead) {
+			this.bossAttackTime--;
+			if (this.bossAttackTime === 0) {
+				this.bossAttackTime = Math.floor(this.xorshift.generate() * 50 + 100);
 				for (const playerId of Object.keys(this.ninjaPlayers)) {
 					const ninjaPlayer = this.ninjaPlayers[playerId];
 					if (ninjaPlayer.zombie > 0) {
 						continue;
 					}
-					const enemyBullet = new g.FrameSprite({
-						scene: scene,
-						src: scene.asset.getImageById("bullet"),
-						width: 16,
-						height: 16,
-						srcWidth: 16,
-						srcHeight: 16,
-						x: this.bossSprite.x + 10,
-						y: this.bossSprite.y + 16,
-						frames: [0, 0, 0, 0, 0, 1, 1, 1, 1, 1], // いったんこれで
-						loop: true,
-						scaleX: 2,
-						scaleY: 2,
-						// interval: 200
-					});
-					scene.append(enemyBullet);
-					enemyBullet.start();
-
-					scene.setTimeout(function () {
-						if (!enemyBullet.destroyed()) {
-							enemyBullet.destroy();
-						}
-					}, 5000);
-
-					// destroyしたものを配列から除く
-					for (let i = 0; i < this.enemyBullets.length; i++) {
-						if (this.enemyBullets[i].enemyBullet.destroyed()) {
-							this.enemyBullets.splice(i, 1);
-							i--;
-						}
-					}
-
-					const enemyBulletR = Math.atan2(ninjaPlayer.ninja.y - enemyBullet.y, ninjaPlayer.ninja.x - enemyBullet.x);
-					this.enemyBullets.push({ enemyBullet, r: enemyBulletR });
+					this.createEnemyBullet(this.bossSprite.x, this.bossSprite.y, ninjaPlayer.ninja.x, ninjaPlayer.ninja.y);
 				}
 			}
 		}
@@ -545,7 +537,7 @@ class MainScene extends g.Scene {
 			}
 		}
 
-		// boss explosion
+		// boss dead explosion
 		if (this.explosionCount > 0) {
 			this.explode(
 				scene,
@@ -634,8 +626,15 @@ class MainScene extends g.Scene {
 		powerup.start();
 		this.powerups.push(powerup);
 		this.groundLayer.append(powerup);
-		this.timeline.create(powerup, { loop: false })
+		const tween = this.timeline.create(powerup, { loop: false })
 			.moveX(-32, (x + 32) * 2000 / this.game.fps);
+		this.powerUpTween.push(tween);
+	}
+
+	stopPowerupItem() {
+		this.powerUpTween.forEach(function (tween: Tween) {
+			tween.cancel();
+		});
 	}
 
 	createPowerupEffect(sprite: g.Sprite): void {
@@ -663,6 +662,46 @@ class MainScene extends g.Scene {
 			}
 			return false;
 		});
+	}
+
+	createEnemyBullet(firingX: number, firingY: number, targetX: number, targetY: number): void {
+		const scene = this;
+		const enemyBullet = new g.FrameSprite({
+			scene: scene,
+			src: scene.asset.getImageById("bullet"),
+			width: 16,
+			height: 16,
+			srcWidth: 16,
+			srcHeight: 16,
+			//x: this.bossSprite.x + 10,
+			//y: this.bossSprite.y + 16,
+			x: firingX,
+			y: firingY,
+			frames: [0, 0, 0, 0, 0, 1, 1, 1, 1, 1], // いったんこれで
+			loop: true,
+			scaleX: 2,
+			scaleY: 2,
+			// interval: 200
+		});
+		scene.append(enemyBullet);
+		enemyBullet.start();
+
+		scene.setTimeout(function () {
+			if (!enemyBullet.destroyed()) {
+				enemyBullet.destroy();
+			}
+		}, 5000);
+
+		// destroyしたものを配列から除く
+		for (let i = 0; i < this.enemyBullets.length; i++) {
+			if (this.enemyBullets[i].enemyBullet.destroyed()) {
+				this.enemyBullets.splice(i, 1);
+				i--;
+			}
+		}
+
+		const enemyBulletR = Math.atan2(targetY - enemyBullet.y, targetX - enemyBullet.x);
+		this.enemyBullets.push({ enemyBullet, r: enemyBulletR });
 	}
 }
 
